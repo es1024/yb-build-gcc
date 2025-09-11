@@ -7,14 +7,13 @@ from typing import Tuple, Union
 
 from sys_detection import is_linux
 
-from build_clang.constants import (
+from build_gcc.constants import (
     DEFAULT_INSTALL_PARENT_DIR,
     DEFAULT_GITHUB_ORG,
-    LLVM_VERSION_MAP,
-    NUM_NON_LTO_STAGES,
+    GCC_VERSION_MAP,
 )
-from build_clang.helpers import get_major_version
-from build_clang.clang_build_conf import ClangBuildConf
+from build_gcc.helpers import get_major_version
+from build_gcc.gcc_build_conf import GCCBuildConf
 
 
 def convert_bool_arg(value: Union[str, bool]) -> bool:
@@ -29,7 +28,7 @@ def convert_bool_arg(value: Union[str, bool]) -> bool:
 
 
 def create_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description='Build Clang/LLVM')
+    parser = argparse.ArgumentParser(description='Build GCC')
     parser.add_argument(
         '--install_parent_dir',
         help='Parent directory of the final installation directory. Default: %s' %
@@ -37,15 +36,15 @@ def create_arg_parser() -> argparse.ArgumentParser:
         default=DEFAULT_INSTALL_PARENT_DIR)
     parser.add_argument(
         '--local_build',
-        help='Run the build locally, even if BUILD_CLANG_REMOTE_... variables are set.',
+        help='Run the build locally, even if BUILD_GCC_REMOTE_... variables are set.',
         action='store_true')
     parser.add_argument(
         '--remote_server', help='Server to build on',
-        default=os.getenv('BUILD_CLANG_REMOTE_SERVER'))
+        default=os.getenv('BUILD_GCC_REMOTE_SERVER'))
     parser.add_argument(
         '--remote_build_scripts_path',
-        help='Remote directory for the build-clang project repo',
-        default=os.getenv('BUILD_CLANG_REMOTE_BUILD_SCRIPTS_PATH'))
+        help='Remote directory for the build-gcc project repo',
+        default=os.getenv('BUILD_GCC_REMOTE_BUILD_SCRIPTS_PATH'))
     parser.add_argument(
         '--clean',
         action='store_true',
@@ -64,30 +63,15 @@ def create_arg_parser() -> argparse.ArgumentParser:
         '--top_dir_suffix',
         help='Suffix to append to the top-level directory that we will use for the build. ')
     parser.add_argument(
-        '--llvm_version',
-        help='LLVM version to build, e.g. 12.0.1, 11.1.0, 10.0.1, 9.0.1, 8.0.1, or 7.1.0, or '
-             'Yugabyte-specific tags with extra patches, such as 12.0.1-yb-1 or 11.1.0-yb-1.',
-        default='18')
+        '--gcc_version',
+        help='GCC version to build, e.g. 12, 13, 12.5.0, etc',
+        default='15')
     parser.add_argument(
         '--skip_auto_suffix',
         help='Do not add automatic suffixes based on Git commit SHA1 and current time to the '
              'build directory and the archive name. This is useful for incremental builds when '
-             'debugging build-clang scripts.',
+             'debugging build-gcc scripts.',
         action='store_true')
-    parser.add_argument(
-        '--use_compiler_wrapper',
-        action='store_true',
-        help='Use a compiler wrapper script. May slow down compilation.')
-    parser.add_argument(
-        '--lto',
-        action='store_true',
-        default=None,
-        help='Use link-time optimization for the final stage of the build (default on Linux)')
-    parser.add_argument(
-        '--no_lto',
-        dest='lto',
-        action='store_false',
-        help='The opposite of --lto (LTO is disabled by default on macOS)')
     parser.add_argument(
         '--upload_earlier_build',
         help='Upload earlier build specified by this path. This is useful for debugging '
@@ -97,13 +81,9 @@ def create_arg_parser() -> argparse.ArgumentParser:
         help='Reuse existing tarball (for use with --upload_earlier_build).',
         action='store_true')
     parser.add_argument(
-        '--no_compiler_rt',
-        help='Do not use compiler-rt runtime',
-        action='store_true')
-    parser.add_argument(
         '--existing_build_dir',
         help='Continue build in an existing directory, e.g. '
-             '/opt/yb-build/llvm/yb-llvm-v12.0.0-1618898532-d28af7c6-build. '
+             '/opt/yb-build/gcc/yb-gcc-v12.5.0-1618898532-d28af7c6-build. '
              'This helps when developing these scripts to avoid rebuilding from scratch.')
     parser.add_argument(
         '--parallelism', '-j',
@@ -130,61 +110,27 @@ def create_arg_parser() -> argparse.ArgumentParser:
         help='Target architecture to build for.',
         choices=['x86_64', 'aarch64', 'arm64'])
 
-    parser.add_argument(
-        '--with_openmp',
-        type=convert_bool_arg,
-        nargs='?',
-        const=True,
-        default=True,
-        help="Build LLVM with OpenMP support (true by default, specify =no to disable).")
-
     return parser
 
 
-def parse_args() -> Tuple[argparse.Namespace, ClangBuildConf]:
+def parse_args() -> Tuple[argparse.Namespace, GCCBuildConf]:
     parser = create_arg_parser()
     args = parser.parse_args()
-
-    max_allowed_stage = NUM_NON_LTO_STAGES + (1 if args.lto else 0)
-
-    if not args.skip_build:
-        if args.max_stage is None:
-            args.max_stage = max_allowed_stage
-        if args.min_stage < 1:
-            raise ValueError("--min_stage value too low: %d" % args.min_stage)
-        if args.max_stage > max_allowed_stage:
-            raise ValueError(
-                f"--max_stage value too high: {args.max_stage}, must be {max_allowed_stage} or "
-                f"lower. LTO is " + ("enabled" if args.lto else "disabled") + ".")
-
-        if args.min_stage > args.max_stage:
-            raise ValueError(
-                "--min-stage value (%d) is greater than --max-stage value (%d)" % (
-                    args.min_stage, args.max_stage))
 
     if args.existing_build_dir:
         logging.info("Assuming --skip_auto_suffix because --existing_build_dir is set")
         args.skip_auto_suffix = True
 
-    adjusted_llvm_version = LLVM_VERSION_MAP.get(
-        args.llvm_version, args.llvm_version)
-    if args.llvm_version != adjusted_llvm_version:
-        logging.info("Automatically substituting LLVM version %s for %s",
-                     adjusted_llvm_version, args.llvm_version)
-    args.llvm_version = adjusted_llvm_version
+    adjusted_gcc_version = GCC_VERSION_MAP.get(
+        args.gcc_version, args.gcc_version)
+    if args.gcc_version != adjusted_gcc_version:
+        logging.info("Automatically substituting GCC version %s for %s",
+                     adjusted_gcc_version, args.gcc_version)
+    args.gcc_version = adjusted_gcc_version
 
-    llvm_major_version = get_major_version(args.llvm_version)
+    gcc_major_version = get_major_version(args.gcc_version)
 
-    if args.lto is None:
-        if is_linux():
-            logging.info("Enabling LTO by default on Linux")
-            args.lto = True
-        else:
-            logging.info("Disabling LTO by default on a non-Linux system")
-            args.lto = False
-
-    logging.info("LLVM major version: %d", llvm_major_version)
-    logging.info("LTO enabled: %s" % args.lto)
+    logging.info("GCC major version: %d", gcc_major_version)
 
     target_arch_arg = args.target_arch
     target_arch_from_env = os.environ.get('YB_TARGET_ARCH')
@@ -204,18 +150,15 @@ def parse_args() -> Tuple[argparse.Namespace, ClangBuildConf]:
                 target_arch_from_env,
                 current_arch))
 
-    build_conf = ClangBuildConf(
+    build_conf = GCCBuildConf(
         install_parent_dir=args.install_parent_dir,
-        version=args.llvm_version,
+        version=args.gcc_version,
         user_specified_suffix=args.top_dir_suffix,
         skip_auto_suffix=args.skip_auto_suffix,
         clean_build=args.clean,
-        use_compiler_wrapper=args.use_compiler_wrapper,
-        use_compiler_rt=not args.no_compiler_rt,
         existing_build_dir=args.existing_build_dir,
         parallelism=args.parallelism,
         target_arch=current_arch,
-        openmp_enabled=args.with_openmp
     )
 
     return args, build_conf
