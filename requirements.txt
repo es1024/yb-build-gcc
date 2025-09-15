@@ -1,0 +1,8 @@
+mypy
+pycodestyle
+requests
+PyGithub
+codecheck
+downloadutil
+sys-detection
+gitpython

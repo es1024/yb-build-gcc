@@ -1,0 +1,25 @@
+# YB_SHA: 43af4ba813027cda281db0f2eea14d3cbf60e98b692290196bc91b53a6101a9f
+autorepr==0.3.0
+certifi==2025.8.3
+cffi==2.0.0
+charset-normalizer==3.4.3
+codecheck==1.3.1
+cryptography==45.0.7
+downloadutil==1.0.4
+gitdb==4.0.12
+GitPython==3.1.45
+idna==3.10
+mypy==1.18.1
+mypy_extensions==1.1.0
+pathspec==0.12.1
+pycodestyle==2.14.0
+pycparser==2.23
+PyGithub==2.8.1
+PyJWT==2.10.1
+PyNaCl==1.6.0
+requests==2.32.5
+smmap==5.0.2
+sys-detection==1.3.4
+tomli==2.2.1
+typing_extensions==4.15.0
+urllib3==2.5.0
