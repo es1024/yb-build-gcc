@@ -198,7 +198,6 @@ def make_file_executable(file_path: str) -> None:
     os.chmod(file_path, current_stat.st_mode | stat.S_IXUSR)
 
 
-
 def get_major_version(version: str) -> int:
     """
     >>> get_major_version("15.0.7")

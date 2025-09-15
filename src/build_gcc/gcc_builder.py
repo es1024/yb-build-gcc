@@ -208,7 +208,6 @@ class GCCBuilder:
             '-a', sha256sum_file_path,
         ], cwd=BUILD_GCC_SCRIPTS_ROOT_PATH)
 
-
     def do_build(self) -> None:
         parent_dir_for_gcc_version = self.build_conf.get_gcc_build_parent_dir()
         build_dir = os.path.join(parent_dir_for_gcc_version, 'build')
