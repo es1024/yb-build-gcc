@@ -45,6 +45,7 @@ class GCCBuilder:
         gcc_src_path = self.build_conf.get_gcc_clone_dir()
         logging.info(f"Cloning GCC code to {gcc_src_path}")
 
+        mkdir_p('/opt/yb-build/gcc')
         find_cmd = [
             'find', '/opt/yb-build/gcc', '-mindepth', '3', '-maxdepth', '3',
             '-wholename', os.path.join('*', GCC_CLONE_REL_PATH)
