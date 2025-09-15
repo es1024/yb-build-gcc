@@ -233,7 +233,6 @@ class GCCBuilder:
         with ChangeDir(build_dir):
             configure_args = [
                 f'--prefix={install_prefix}',
-                f'--program-suffix={self.build_conf.gcc_major_version}',
                 '--disable-multilib',
                 '--disable-nls',
                 '--enable-languages=c,c++,lto',
