@@ -223,6 +223,12 @@ class GCCBuilder:
         if parallelism is None:
             parallelism = os.cpu_count()
 
+        with ChangeDir(self.build_conf.get_gcc_clone_dir()):
+            logging.info("Running download_prerequisites")
+            run_cmd(get_arch_switch_cmd_prefix(self.build_conf.target_arch) + [
+                os.path.join('contrib', 'download_prerequisites')
+            ])
+
         mkdir_p(build_dir)
         with ChangeDir(build_dir):
             configure_args = [
