@@ -50,16 +50,6 @@ def create_arg_parser() -> argparse.ArgumentParser:
         action='store_true',
         help='Clean the build directory before the build')
     parser.add_argument(
-        '--min_stage',
-        type=int,
-        default=1,
-        help='First stage to build')
-    parser.add_argument(
-        '--max_stage',
-        type=int,
-        default=None,
-        help='Last stage to build')
-    parser.add_argument(
         '--top_dir_suffix',
         help='Suffix to append to the top-level directory that we will use for the build. ')
     parser.add_argument(
@@ -97,7 +87,7 @@ def create_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         '--skip_build',
-        help='Skip building any of the stages. Useful for debugging, or when combined with '
+        help='Skip building. Useful for debugging, or when combined with '
              '--existing_build_dir, when you want to upload an existing build.',
         action='store_true')
     parser.add_argument(
